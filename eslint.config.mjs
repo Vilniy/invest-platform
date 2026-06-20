@@ -12,6 +12,9 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // One-off Node scripts run outside the Next.js build (e.g. via `node`),
+    // не часть фронтенд/серверного кода приложения.
+    "scripts/**",
   ]),
 ]);
 
