@@ -42,9 +42,12 @@ export default async function ProjectPage({
   );
   const totalAmount = Number(project.totalAmount);
   const roiPercent = Number(project.roiPercent);
+  const minInvestment = Number(project.minInvestment);
   const progress = progressPercent(collectedAmount, totalAmount);
   const investorsCount = new Set(project.investments.map((i) => i.userId))
     .size;
+  const remaining = Math.max(0, totalAmount - collectedAmount);
+  const canAcceptInvestment = project.status === "ACTIVE" && remaining >= minInvestment;
 
   const supabase = await createClient();
   const { data: authData } = await supabase.auth.getUser();
@@ -137,7 +140,7 @@ export default async function ProjectPage({
               <div>
                 <dt className="text-muted-foreground">Мин. вход</dt>
                 <dd className="mt-0.5 font-medium">
-                  {formatUSD(Number(project.minInvestment))}
+                  {formatUSD(minInvestment)}
                 </dd>
               </div>
               <div>
@@ -161,13 +164,15 @@ export default async function ProjectPage({
               </p>
             )}
 
-            {project.status !== "ACTIVE" ? (
+            {!canAcceptInvestment ? (
               <>
                 <Button disabled className="mt-6 w-full">
                   Инвестировать
                 </Button>
                 <p className="mt-2 text-center text-xs text-muted-foreground">
-                  Сбор по этому проекту закрыт
+                  {project.status !== "ACTIVE"
+                    ? "Сбор по этому проекту закрыт"
+                    : "Почти собрано — остаток меньше минимального взноса"}
                 </p>
               </>
             ) : !isLoggedIn ? (
@@ -189,10 +194,10 @@ export default async function ProjectPage({
                   type="number"
                   name="amount"
                   required
-                  min={Number(project.minInvestment)}
-                  max={totalAmount - collectedAmount}
+                  min={minInvestment}
+                  max={remaining}
                   step="1"
-                  defaultValue={Number(project.minInvestment)}
+                  defaultValue={minInvestment}
                   className="h-10 w-full rounded-lg border border-border bg-background px-3 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
                 />
                 <Button type="submit" className="mt-3 w-full">

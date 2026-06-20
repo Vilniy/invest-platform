@@ -6,8 +6,8 @@ import { createClient } from "@/lib/supabase/server";
 import { ensureUserProfile } from "@/lib/supabase/ensure-user";
 import { prisma } from "@/lib/prisma";
 
-function back(projectId: string, key: "error" | "invested", value: string): never {
-  redirect(`/projects/${projectId}?${key}=${encodeURIComponent(value)}`);
+function back(projectId: string, message: string): never {
+  redirect(`/projects/${projectId}?error=${encodeURIComponent(message)}`);
 }
 
 export async function createInvestment(formData: FormData) {
@@ -41,7 +41,7 @@ export async function createInvestment(formData: FormData) {
   }
 
   if (project.status !== "ACTIVE") {
-    back(projectId, "error", "Сбор по этому проекту закрыт");
+    back(projectId, "Сбор по этому проекту закрыт");
   }
 
   const minInvestment = Number(project.minInvestment);
@@ -53,17 +53,13 @@ export async function createInvestment(formData: FormData) {
   const remaining = totalAmount - collected;
 
   if (!Number.isFinite(amount) || amount <= 0) {
-    back(projectId, "error", "Укажи корректную сумму");
+    back(projectId, "Укажи корректную сумму");
   }
   if (amount < minInvestment) {
-    back(projectId, "error", `Минимальная сумма — ${minInvestment} USD`);
+    back(projectId, `Минимальная сумма — ${minInvestment} USD`);
   }
   if (amount > remaining) {
-    back(
-      projectId,
-      "error",
-      `Осталось собрать всего ${remaining.toFixed(2)} USD`
-    );
+    back(projectId, `Осталось собрать всего ${remaining.toFixed(2)} USD`);
   }
 
   await ensureUserProfile(authData.user);

@@ -1,4 +1,4 @@
-import { createHash } from "crypto";
+import { createHash, timingSafeEqual } from "crypto";
 
 const PUBLIC_KEY = process.env.LIQPAY_PUBLIC_KEY ?? "";
 const PRIVATE_KEY = process.env.LIQPAY_PRIVATE_KEY ?? "";
@@ -89,6 +89,10 @@ export async function checkOrderStatus(
 // Проверка подписи входящего вебхука (server_url) перед тем, как доверять
 // его содержимому.
 export function verifyCallback(data: string, signature: string) {
-  if (sign(data) !== signature) return null;
+  const expected = Buffer.from(sign(data));
+  const actual = Buffer.from(signature);
+  if (expected.length !== actual.length || !timingSafeEqual(expected, actual)) {
+    return null;
+  }
   return JSON.parse(Buffer.from(data, "base64").toString("utf-8")) as LiqpayStatusResponse;
 }
