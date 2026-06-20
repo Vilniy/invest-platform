@@ -1,0 +1,159 @@
+// Это схема базы данных для платформы инвестиций в недвижимость
+// Файл нужно скопировать в prisma/schema.prisma в твоём проекте
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ─────────────────────────────────────────
+// ПОЛЬЗОВАТЕЛИ (инвесторы)
+// ─────────────────────────────────────────
+model User {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  name      String?
+  phone     String?
+  avatarUrl String?
+
+  // Верификация личности (KYC) — на будущее
+  kycStatus KycStatus @default(PENDING)
+
+  // Связи
+  investments Investment[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("users")
+}
+
+enum KycStatus {
+  PENDING    // Не верифицирован
+  VERIFIED   // Верифицирован
+  REJECTED   // Отказано
+}
+
+// ─────────────────────────────────────────
+// ПРОЕКТЫ (объекты недвижимости)
+// ─────────────────────────────────────────
+model Project {
+  id          String  @id @default(uuid())
+  title       String  // Например: "Офисные площади, 200 кв.м."
+  description String  // Описание объекта
+  location    String  // Адрес / район
+  photoUrl    String? // Фото объекта
+
+  // Финансовые параметры
+  totalAmount    Decimal @db.Decimal(18, 2) // Сколько нужно собрать (USD)
+  minInvestment  Decimal @db.Decimal(18, 2) @default(100) // Минимальная инвестиция
+  roiPercent     Decimal @db.Decimal(5, 2)  // Доходность в % (например 20.00)
+  durationMonths Int                         // Срок в месяцах (например 6)
+
+  // Даты
+  startDate DateTime?
+  endDate   DateTime?
+
+  // Статус проекта
+  status ProjectStatus @default(DRAFT)
+
+  // Связи
+  investments Investment[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("projects")
+}
+
+enum ProjectStatus {
+  DRAFT      // Черновик (не виден на сайте)
+  ACTIVE     // Активный сбор инвестиций
+  FUNDED     // Собрана вся сумма, проект стартовал
+  COMPLETED  // Проект завершён, выплаты произведены
+  CANCELLED  // Отменён
+}
+
+// ─────────────────────────────────────────
+// ИНВЕСТИЦИИ (вложения инвесторов)
+// ─────────────────────────────────────────
+model Investment {
+  id        String @id @default(uuid())
+
+  // Связи с пользователем и проектом
+  userId    String
+  user      User    @relation(fields: [userId], references: [id])
+  projectId String
+  project   Project @relation(fields: [projectId], references: [id])
+
+  // Сумма вложения
+  amount   Decimal @db.Decimal(18, 2)
+  currency String  @default("USD")
+
+  // Статус инвестиции
+  status InvestmentStatus @default(PENDING)
+
+  // Прибыль (заполняется при завершении проекта)
+  profitAmount Decimal? @db.Decimal(18, 2)
+  paidOutAt    DateTime?
+
+  // Переуступка (передача инвестиции другому инвестору)
+  isTransferred   Boolean   @default(false)
+  transferredToId String?   // ID нового инвестора
+  transferredAt   DateTime?
+
+  // Связи
+  transactions Transaction[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("investments")
+}
+
+enum InvestmentStatus {
+  PENDING    // Ожидает оплаты
+  CONFIRMED  // Оплата подтверждена
+  ACTIVE     // Участвует в проекте
+  PAID_OUT   // Выплата получена
+  CANCELLED  // Отменена
+  TRANSFERRED // Переуступлена
+}
+
+// ─────────────────────────────────────────
+// ТРАНЗАКЦИИ (платежи через LiqPay)
+// ─────────────────────────────────────────
+model Transaction {
+  id           String @id @default(uuid())
+
+  investmentId String
+  investment   Investment @relation(fields: [investmentId], references: [id])
+
+  // Данные платёжной системы
+  liqpayOrderId   String  @unique // Наш ID заказа
+  liqpayPaymentId String? // ID платежа в LiqPay
+
+  amount        Decimal @db.Decimal(18, 2)
+  fee           Decimal @db.Decimal(18, 2) @default(0) // Комиссия LiqPay
+  currency      String  @default("USD")
+
+  status PaymentStatus @default(PENDING)
+
+  // Сырой ответ от LiqPay (для отладки)
+  rawResponse Json?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("transactions")
+}
+
+enum PaymentStatus {
+  PENDING    // Создан, ждём оплаты
+  SUCCESS    // Оплачен
+  FAILURE    // Ошибка оплаты
+  REVERSED   // Возврат средств
+}
