@@ -3,6 +3,7 @@ import Link from "next/link";
 import { MapPin, Clock, TrendingUp } from "lucide-react";
 import type { ProjectStatus } from "@prisma/client";
 import { Button } from "@/components/ui/button";
+import { STATUS_LABEL, formatUSD, progressPercent } from "@/lib/project";
 
 export type ProjectCardData = {
   id: string;
@@ -17,30 +18,8 @@ export type ProjectCardData = {
   status: ProjectStatus;
 };
 
-const STATUS_LABEL: Record<ProjectStatus, string> = {
-  DRAFT: "Черновик",
-  ACTIVE: "Сбор инвестиций",
-  FUNDED: "Сбор завершён",
-  COMPLETED: "Проект завершён",
-  CANCELLED: "Отменён",
-};
-
-function formatUSD(amount: number) {
-  return new Intl.NumberFormat("en-US", {
-    style: "currency",
-    currency: "USD",
-    maximumFractionDigits: 0,
-  }).format(amount);
-}
-
 export function ProjectCard({ project }: { project: ProjectCardData }) {
-  const progress =
-    project.totalAmount > 0
-      ? Math.min(
-          100,
-          Math.round((project.collectedAmount / project.totalAmount) * 100)
-        )
-      : 0;
+  const progress = progressPercent(project.collectedAmount, project.totalAmount);
 
   return (
     <div className="flex flex-col overflow-hidden rounded-xl border border-border bg-card shadow-sm transition-shadow hover:shadow-md">
