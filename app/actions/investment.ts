@@ -68,7 +68,7 @@ export async function createInvestment(formData: FormData) {
 
   await ensureUserProfile(authData.user);
 
-  await prisma.investment.create({
+  const investment = await prisma.investment.create({
     data: {
       userId: authData.user.id,
       projectId,
@@ -79,5 +79,5 @@ export async function createInvestment(formData: FormData) {
   });
 
   revalidatePath(`/projects/${projectId}`);
-  back(projectId, "invested", "1");
+  redirect(`/invest/${investment.id}`);
 }
