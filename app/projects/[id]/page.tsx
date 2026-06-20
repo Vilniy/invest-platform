@@ -4,6 +4,8 @@ import { notFound } from "next/navigation";
 import { ArrowLeft, MapPin, Clock, TrendingUp, Users } from "lucide-react";
 import { prisma } from "@/lib/prisma";
 import { Button } from "@/components/ui/button";
+import { SiteHeader } from "@/components/SiteHeader";
+import { createClient } from "@/lib/supabase/server";
 import { STATUS_LABEL, formatUSD, progressPercent } from "@/lib/project";
 
 // Детали проекта должны быть свежими (сумма сбора меняется), без статического кэша.
@@ -40,24 +42,23 @@ export default async function ProjectPage({
   const investorsCount = new Set(project.investments.map((i) => i.userId))
     .size;
 
+  const supabase = await createClient();
+  const { data: authData } = await supabase.auth.getUser();
+  const isLoggedIn = Boolean(authData.user);
+
   return (
     <div className="flex flex-col flex-1 bg-zinc-50 dark:bg-black">
-      <header className="border-b border-border bg-white px-6 py-5 dark:bg-black">
-        <div className="mx-auto flex max-w-5xl items-center justify-between">
-          <Link href="/" className="text-lg font-semibold">
-            Invest Platform
-          </Link>
-          <Link
-            href="/"
-            className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
-          >
-            <ArrowLeft className="size-3.5" />
-            Все проекты
-          </Link>
-        </div>
-      </header>
+      <SiteHeader />
 
       <main className="mx-auto w-full max-w-5xl flex-1 px-6 py-10">
+        <Link
+          href="/"
+          className="mb-6 flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
+        >
+          <ArrowLeft className="size-3.5" />
+          Все проекты
+        </Link>
+
         <div className="grid grid-cols-1 gap-8 lg:grid-cols-[1.4fr_1fr]">
           <div>
             <div className="relative aspect-[16/9] w-full overflow-hidden rounded-xl bg-muted">
@@ -144,12 +145,25 @@ export default async function ProjectPage({
               </div>
             </dl>
 
-            <Button disabled className="mt-6 w-full">
-              Инвестировать
-            </Button>
-            <p className="mt-2 text-center text-xs text-muted-foreground">
-              Форма инвестиции откроется после добавления регистрации
-            </p>
+            {isLoggedIn ? (
+              <>
+                <Button disabled className="mt-6 w-full">
+                  Инвестировать
+                </Button>
+                <p className="mt-2 text-center text-xs text-muted-foreground">
+                  Форма инвестиции появится на следующем шаге
+                </p>
+              </>
+            ) : (
+              <>
+                <Button asChild className="mt-6 w-full">
+                  <Link href="/login">Войти, чтобы инвестировать</Link>
+                </Button>
+                <p className="mt-2 text-center text-xs text-muted-foreground">
+                  Нужен аккаунт — это бесплатно и быстро
+                </p>
+              </>
+            )}
           </aside>
         </div>
       </main>

@@ -1,6 +1,6 @@
-import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { ProjectCard, type ProjectCardData } from "@/components/ProjectCard";
+import { SiteHeader } from "@/components/SiteHeader";
 
 // Список проектов нужен свежим на каждый запрос (статусы и суммы меняются),
 // поэтому не кэшируем страницу статически.
@@ -40,15 +40,7 @@ export default async function Home() {
 
   return (
     <div className="flex flex-col flex-1 bg-zinc-50 dark:bg-black">
-      <header className="border-b border-border bg-white px-6 py-5 dark:bg-black">
-        <div className="mx-auto flex max-w-6xl items-center justify-between">
-          <span className="text-lg font-semibold">Invest Platform</span>
-          <nav className="flex gap-4 text-sm text-muted-foreground">
-            <Link href="/dashboard">Кабинет</Link>
-            <Link href="/admin">Админка</Link>
-          </nav>
-        </div>
-      </header>
+      <SiteHeader />
 
       <main className="mx-auto w-full max-w-6xl flex-1 px-6 py-10">
         <h1 className="mb-1 text-2xl font-semibold tracking-tight">
