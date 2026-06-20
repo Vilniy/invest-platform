@@ -7,16 +7,20 @@ import { Button } from "@/components/ui/button";
 import { SiteHeader } from "@/components/SiteHeader";
 import { createClient } from "@/lib/supabase/server";
 import { STATUS_LABEL, formatUSD, progressPercent } from "@/lib/project";
+import { createInvestment } from "@/app/actions/investment";
 
 // Детали проекта должны быть свежими (сумма сбора меняется), без статического кэша.
 export const dynamic = "force-dynamic";
 
 export default async function ProjectPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ id: string }>;
+  searchParams: Promise<{ invested?: string; error?: string }>;
 }) {
   const { id } = await params;
+  const { invested, error: investError } = await searchParams;
 
   const project = await prisma.project.findUnique({
     where: { id },
@@ -145,16 +149,28 @@ export default async function ProjectPage({
               </div>
             </dl>
 
-            {isLoggedIn ? (
+            {invested && (
+              <p className="mt-5 rounded-lg bg-muted px-3 py-2 text-sm text-foreground">
+                Заявка на инвестицию создана. Переход к оплате (LiqPay)
+                появится на следующем шаге — мы сообщим, когда можно платить.
+              </p>
+            )}
+            {investError && (
+              <p className="mt-5 rounded-lg bg-destructive/10 px-3 py-2 text-sm text-destructive">
+                {investError}
+              </p>
+            )}
+
+            {project.status !== "ACTIVE" ? (
               <>
                 <Button disabled className="mt-6 w-full">
                   Инвестировать
                 </Button>
                 <p className="mt-2 text-center text-xs text-muted-foreground">
-                  Форма инвестиции появится на следующем шаге
+                  Сбор по этому проекту закрыт
                 </p>
               </>
-            ) : (
+            ) : !isLoggedIn ? (
               <>
                 <Button asChild className="mt-6 w-full">
                   <Link href="/login">Войти, чтобы инвестировать</Link>
@@ -163,6 +179,29 @@ export default async function ProjectPage({
                   Нужен аккаунт — это бесплатно и быстро
                 </p>
               </>
+            ) : (
+              <form action={createInvestment} className="mt-6">
+                <input type="hidden" name="projectId" value={project.id} />
+                <label className="mb-1 block text-sm text-muted-foreground">
+                  Сумма инвестиции, USD
+                </label>
+                <input
+                  type="number"
+                  name="amount"
+                  required
+                  min={Number(project.minInvestment)}
+                  max={totalAmount - collectedAmount}
+                  step="1"
+                  defaultValue={Number(project.minInvestment)}
+                  className="h-10 w-full rounded-lg border border-border bg-background px-3 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
+                />
+                <Button type="submit" className="mt-3 w-full">
+                  Инвестировать
+                </Button>
+                <p className="mt-2 text-center text-xs text-muted-foreground">
+                  Заявка создаётся сразу, оплата — на следующем шаге
+                </p>
+              </form>
             )}
           </aside>
         </div>
